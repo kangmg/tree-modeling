@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xmastree"
+version = "1.0.0"
+description = "Atomic Christmas Tree Generator - chemically accurate molecular structures"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+dependencies = [
+    "ase>=3.22.0",
+    "numpy>=1.20.0",
+]
+
+[project.optional-dependencies]
+notebook = ["ipython>=7.0.0"]
+
+[tool.setuptools.packages.find]
+include = ["xmastree*"]
+
+[tool.setuptools.package-data]
+xmastree = ["libs/*.js"]
