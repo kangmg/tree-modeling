@@ -31,7 +31,7 @@ class TreeConfig:
     helix_end_radius: float = 30.0    # Radius at bottom (large)
 
     # Decorations (Halogen substitution) - ~25% of H atoms
-    n_decorations_per_halogen: int = 20  # Number of each F, Cl, Br (60 total)
+    n_decorations_per_halogen: int = 230  # Number of each F, Cl, Br (~690 total, ~25%)
 
     # Random seed for reproducibility
     random_seed: int = 42
@@ -128,122 +128,123 @@ def create_fe_hcp_pillar(n_layers: int = 18) -> Tuple[Atoms, List[Atoms]]:
 
 
 # =============================================================================
-# Part 3: Helicene-based Spiral Leaves
+# Part 3: Helicene-based Spiral Leaves (Fused Polymer)
 # =============================================================================
-def create_benzene_ring(center: np.ndarray, normal: np.ndarray,
-                        tangent: np.ndarray, add_hydrogens: bool = True) -> Tuple[List, List]:
-    """
-    Create a single benzene ring at given position with orientation.
-
-    Parameters:
-        center: Center position of the ring
-        normal: Normal vector to the ring plane
-        tangent: Direction for positioning (radial outward)
-        add_hydrogens: Whether to add H atoms on outer edge
-
-    Returns:
-        (carbon_positions, hydrogen_positions)
-    """
-    cc = BOND_LENGTHS['C-C_aromatic']
-    ch = BOND_LENGTHS['C-H']
-
-    # Normalize vectors
-    normal = normal / np.linalg.norm(normal)
-    tangent = tangent / np.linalg.norm(tangent)
-
-    # Create orthonormal basis
-    binormal = np.cross(normal, tangent)
-    binormal = binormal / np.linalg.norm(binormal)
-    tangent = np.cross(binormal, normal)  # Ensure orthogonal
-
-    # Rotation matrix from local to global
-    R = np.column_stack([tangent, binormal, normal])
-
-    # Carbon positions in local coordinates (hexagon)
-    c_positions = []
-    h_positions = []
-    radius_c = cc
-    radius_h = radius_c + ch
-
-    for i in range(6):
-        angle = i * np.pi / 3 + np.pi / 6
-        local_c = np.array([radius_c * np.cos(angle), radius_c * np.sin(angle), 0])
-        global_c = center + R @ local_c
-        c_positions.append(global_c)
-
-        if add_hydrogens:
-            local_h = np.array([radius_h * np.cos(angle), radius_h * np.sin(angle), 0])
-            global_h = center + R @ local_h
-            h_positions.append(global_h)
-
-    return c_positions, h_positions
-
-
-def create_helicene_spiral_leaves(
+def create_fused_helicene_spiral(
     pillar_height: float,
-    n_helix_turns: float = 3.0,
-    n_rings_per_turn: int = 8,
-    start_radius: float = 4.0,
-    end_radius: float = 18.0
+    n_helix_turns: float = 5.0,
+    base_rings_per_turn: int = 12,
+    start_radius: float = 6.0,
+    end_radius: float = 30.0
 ) -> Tuple[Atoms, List[Atoms]]:
     """
-    Create helicene-inspired spiral leaves around the pillar.
+    Create ortho-fused polycyclic aromatic helix (helicene-like polymer).
 
-    Benzene rings are placed in a continuous helix pattern,
-    with radius increasing from top to bottom (cone shape).
+    Benzene rings are fused together sharing edges (ortho-fusion),
+    forming a continuous ribbon that spirals down.
+    Ring density increases with radius to maintain coverage.
 
     Parameters:
         pillar_height: Height of the Fe pillar
         n_helix_turns: Number of complete helix rotations
-        n_rings_per_turn: Number of benzene rings per turn
+        base_rings_per_turn: Base number of rings per turn (at top)
         start_radius: Helix radius at top
         end_radius: Helix radius at bottom
 
     Returns:
-        (complete_leaves, [ring_group1, ring_group2, ...])
+        (complete_leaves, [layer_group1, layer_group2, ...])
     """
-    total_rings = int(n_helix_turns * n_rings_per_turn)
+    cc = BOND_LENGTHS['C-C_aromatic']
+    ch = BOND_LENGTHS['C-H']
 
     # Helix parameters
     start_z = pillar_height + 2.0
     end_z = 4.0
+    n_layers = int(n_helix_turns * base_rings_per_turn)
 
-    all_atoms = Atoms()
+    all_c_positions = []
+    all_h_positions = []
     group_list = []
 
-    for i in range(total_rings):
-        t = i / max(1, total_rings - 1)
+    # Track previous ring's shared carbons for fusion
+    prev_shared_carbons = None
 
-        # Position along helix
-        angle = t * n_helix_turns * 2 * np.pi
+    for layer in range(n_layers):
+        t = layer / max(1, n_layers - 1)
+
+        # Current height and radius
         z = start_z - t * (start_z - end_z)
         radius = start_radius + t * (end_radius - start_radius)
 
-        x = radius * np.cos(angle)
-        y = radius * np.sin(angle)
-        center = np.array([x, y, z])
+        # Number of rings at this radius (proportional to circumference)
+        # More rings at larger radius to maintain density
+        n_rings_at_layer = max(3, int(base_rings_per_turn * radius / start_radius / 3))
 
-        # Orientation: ring faces outward and tilts down
-        # Normal is tilted outward (radial) and slightly down
-        radial = np.array([np.cos(angle), np.sin(angle), 0])
-        down_tilt = 0.3  # Tilt factor
-        normal = radial + np.array([0, 0, -down_tilt])
-        normal = normal / np.linalg.norm(normal)
+        layer_c_positions = []
+        layer_h_positions = []
 
-        # Tangent along helix direction
-        tangent = np.array([-np.sin(angle), np.cos(angle), 0])
+        for ring_idx in range(n_rings_at_layer):
+            # Angular position around the helix
+            base_angle = t * n_helix_turns * 2 * np.pi
+            ring_angle = base_angle + (ring_idx / n_rings_at_layer) * 2 * np.pi
 
-        # Create benzene ring
-        c_pos, h_pos = create_benzene_ring(center, normal, tangent, add_hydrogens=True)
+            # Ring center position
+            cx = radius * np.cos(ring_angle)
+            cy = radius * np.sin(ring_angle)
+            center = np.array([cx, cy, z])
 
-        positions = c_pos + h_pos
-        symbols = ['C'] * 6 + ['H'] * 6
+            # Ring orientation: face outward with tilt
+            radial = np.array([np.cos(ring_angle), np.sin(ring_angle), 0])
+            down_tilt = 0.4
+            normal = radial + np.array([0, 0, -down_tilt])
+            normal = normal / np.linalg.norm(normal)
 
-        ring_atoms = Atoms(symbols=symbols, positions=positions)
-        all_atoms += ring_atoms
-        group_list.append(ring_atoms.copy())
+            tangent = np.array([-np.sin(ring_angle), np.cos(ring_angle), 0])
+            binormal = np.cross(normal, tangent)
+            binormal = binormal / np.linalg.norm(binormal)
+            tangent = np.cross(binormal, normal)
 
-    return all_atoms, group_list
+            R = np.column_stack([tangent, binormal, normal])
+
+            # Create hexagon carbons
+            ring_carbons = []
+            for i in range(6):
+                angle = i * np.pi / 3 + np.pi / 6
+                local_c = np.array([cc * np.cos(angle), cc * np.sin(angle), 0])
+                global_c = center + R @ local_c
+                ring_carbons.append(global_c)
+
+            layer_c_positions.extend(ring_carbons)
+
+            # Add hydrogens only on outer edge (4 per ring for fused structure)
+            # Outer hydrogens: positions 0, 1, 4, 5 (away from fusion points)
+            outer_h_indices = [0, 1, 4, 5]
+            for idx in outer_h_indices:
+                angle = idx * np.pi / 3 + np.pi / 6
+                local_h = np.array([(cc + ch) * np.cos(angle), (cc + ch) * np.sin(angle), 0])
+                global_h = center + R @ local_h
+                layer_h_positions.append(global_h)
+
+        # Store this layer
+        all_c_positions.extend(layer_c_positions)
+        all_h_positions.extend(layer_h_positions)
+
+        # Create Atoms for this layer (for animation)
+        n_c = len(layer_c_positions)
+        n_h = len(layer_h_positions)
+        layer_atoms = Atoms(
+            symbols=['C'] * n_c + ['H'] * n_h,
+            positions=layer_c_positions + layer_h_positions
+        )
+        group_list.append(layer_atoms)
+
+    # Combine all
+    all_positions = all_c_positions + all_h_positions
+    all_symbols = ['C'] * len(all_c_positions) + ['H'] * len(all_h_positions)
+
+    complete_leaves = Atoms(symbols=all_symbols, positions=all_positions)
+
+    return complete_leaves, group_list
 
 
 # =============================================================================
@@ -399,21 +400,23 @@ def build_christmas_tree(config: Optional[TreeConfig] = None) -> Atoms:
     traj.write(current_atoms)
     print(f"  Added {len(au_star)} Au atoms (icosahedral cluster)")
 
-    # ----- Stage 4: Carbon Leaves (Helicene spiral) -----
-    print("\n[Stage 4] Growing helicene spiral leaves...")
-    leaves, ring_groups = create_helicene_spiral_leaves(
+    # ----- Stage 4: Carbon Leaves (Fused helicene spiral) -----
+    print("\n[Stage 4] Growing fused helicene spiral leaves...")
+    leaves, layer_groups = create_fused_helicene_spiral(
         pillar_height=pillar_height,
         n_helix_turns=config.n_helix_turns,
-        n_rings_per_turn=config.n_rings_per_turn,
+        base_rings_per_turn=config.n_rings_per_turn,
         start_radius=config.helix_start_radius,
         end_radius=config.helix_end_radius
     )
 
-    for i, ring in enumerate(ring_groups):
-        current_atoms += ring
+    for i, layer in enumerate(layer_groups):
+        current_atoms += layer
         traj.write(current_atoms)
-        if (i + 1) % 5 == 0 or i == len(ring_groups) - 1:
-            print(f"  Ring {i+1}/{len(ring_groups)}: Added benzene ring")
+        n_c = sum(1 for s in layer.get_chemical_symbols() if s == 'C')
+        n_rings = n_c // 6
+        if (i + 1) % 10 == 0 or i == len(layer_groups) - 1:
+            print(f"  Layer {i+1}/{len(layer_groups)}: {n_rings} fused rings")
 
     # ----- Stage 5: Halogen Decorations -----
     print("\n[Stage 5] Adding halogen decorations...")
