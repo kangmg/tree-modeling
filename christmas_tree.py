@@ -10,7 +10,34 @@ Atomic Christmas Tree Model
 import numpy as np
 from ase import Atoms
 from ase.io.trajectory import Trajectory
-from typing import List, Tuple
+from typing import List, Tuple, Optional
+from dataclasses import dataclass
+
+
+@dataclass
+class TreeConfig:
+    """Configuration parameters for the atomic Christmas tree."""
+    # Base (Ag slab)
+    slab_nx: int = 10
+    slab_ny: int = 10
+
+    # Trunk (Fe HCP pillar)
+    pillar_layers: int = 12
+
+    # Leaves (PAH spiral)
+    n_leaf_layers: int = 10  # Number of PAH molecules
+    n_spirals: float = 2.0   # Number of spiral rotations
+    leaf_start_radius: float = 3.0   # Radius at top
+    leaf_end_radius: float = 12.0    # Radius at bottom
+
+    # Decorations (Halogen substitution)
+    n_decorations_per_halogen: int = 3  # Number of each F, Cl, Br
+
+    # Random seed for reproducibility
+    random_seed: int = 42
+
+    # Output
+    output_file: str = "christmas_tree.traj"
 
 
 # =============================================================================
@@ -328,31 +355,42 @@ def create_coronene() -> Atoms:
     return Atoms(symbols=symbols, positions=positions)
 
 
-def create_pah_spiral_leaves(pillar_height: float, n_spirals: int = 3) -> Tuple[Atoms, List[Atoms]]:
+def create_pah_spiral_leaves(
+    pillar_height: float,
+    n_leaf_layers: int = 10,
+    n_spirals: float = 2.0,
+    start_radius: float = 3.0,
+    end_radius: float = 12.0
+) -> Tuple[Atoms, List[Atoms]]:
     """
     Create PAH molecules arranged in a spiral from top to bottom.
     Size increases as we go down (benzene at top → coronene at bottom).
 
     Parameters:
         pillar_height: Height of the Fe pillar (z-coordinate of top)
+        n_leaf_layers: Number of PAH molecules to place
         n_spirals: Number of complete spiral rotations
+        start_radius: Radius at top (smaller)
+        end_radius: Radius at bottom (larger)
 
     Returns:
         (complete_leaves, [pah_group1, pah_group2, ...])
     """
-    # PAH molecules from smallest to largest
-    pah_creators = [
-        ('benzene', create_benzene),
+    # PAH molecules from smallest to largest (will be selected based on n_leaf_layers)
+    pah_types = [
         ('benzene', create_benzene),
         ('naphthalene', create_naphthalene),
-        ('naphthalene', create_naphthalene),
         ('pyrene', create_pyrene),
-        ('pyrene', create_pyrene),
-        ('pyrene', create_pyrene),
-        ('coronene', create_coronene),
-        ('coronene', create_coronene),
         ('coronene', create_coronene),
     ]
+
+    # Distribute PAH types across leaf layers (smaller at top, larger at bottom)
+    pah_creators = []
+    for i in range(n_leaf_layers):
+        # Map layer index to PAH type (0-3)
+        t = i / max(1, n_leaf_layers - 1)
+        pah_idx = min(int(t * len(pah_types)), len(pah_types) - 1)
+        pah_creators.append(pah_types[pah_idx])
 
     n_molecules = len(pah_creators)
     all_atoms = Atoms()
@@ -361,8 +399,6 @@ def create_pah_spiral_leaves(pillar_height: float, n_spirals: int = 3) -> Tuple[
     # Spiral parameters
     start_z = pillar_height + 1.0  # Start above the pillar
     end_z = 5.0  # End above the base
-    start_radius = 3.0  # Small radius at top
-    end_radius = 12.0  # Large radius at bottom
 
     for i, (name, creator) in enumerate(pah_creators):
         # Calculate position in spiral
@@ -420,13 +456,18 @@ def create_pah_spiral_leaves(pillar_height: float, n_spirals: int = 3) -> Tuple[
 # =============================================================================
 # Part 4: Halogen Decorations
 # =============================================================================
-def add_halogen_decorations(atoms: Atoms, n_substitutions: int = 3) -> Tuple[Atoms, List[Tuple[int, str]]]:
+def add_halogen_decorations(
+    atoms: Atoms,
+    n_substitutions: int = 3,
+    random_seed: int = 42
+) -> Tuple[Atoms, List[Tuple[int, str]]]:
     """
     Randomly substitute H atoms with F, Cl, or Br.
 
     Parameters:
         atoms: Atoms object containing the tree
-        n_substitutions: Number of each halogen to add (3 F, 3 Cl, 3 Br)
+        n_substitutions: Number of each halogen to add (n F, n Cl, n Br)
+        random_seed: Random seed for reproducibility
 
     Returns:
         (modified_atoms, [(index, new_symbol), ...])
@@ -442,7 +483,7 @@ def add_halogen_decorations(atoms: Atoms, n_substitutions: int = 3) -> Tuple[Ato
         n_substitutions = len(h_indices) // 3
 
     # Randomly select hydrogens to replace
-    np.random.seed(42)  # For reproducibility
+    np.random.seed(random_seed)  # For reproducibility
     selected = np.random.choice(h_indices, size=n_substitutions * 3, replace=False)
 
     halogens = ['F'] * n_substitutions + ['Cl'] * n_substitutions + ['Br'] * n_substitutions
@@ -519,39 +560,49 @@ def create_au_star(center_z: float) -> Atoms:
 # =============================================================================
 # Part 6: Assembly and Animation
 # =============================================================================
-def build_christmas_tree(output_file: str = "christmas_tree.traj") -> Atoms:
+def build_christmas_tree(config: Optional[TreeConfig] = None) -> Atoms:
     """
     Build the complete atomic Christmas tree and save animation trajectory.
 
     Animation frames:
     1. Ag slab (all at once)
     2. Fe pillar (layer by layer)
-    3. Carbon leaves (PAH group by group)
-    4. Halogen decorations (3 at a time)
-    5. Au star (all at once)
+    3. Au star (all at once)
+    4. Carbon leaves (PAH group by group)
+    5. Halogen decorations (3 at a time)
 
     Parameters:
-        output_file: Output trajectory filename
+        config: TreeConfig object with all parameters (uses defaults if None)
 
     Returns:
         Complete Atoms object
     """
-    traj = Trajectory(output_file, 'w')
+    if config is None:
+        config = TreeConfig()
+
+    traj = Trajectory(config.output_file, 'w')
     current_atoms = Atoms()
 
     print("Building Atomic Christmas Tree...")
     print("=" * 50)
+    print(f"Configuration:")
+    print(f"  Slab: {config.slab_nx}x{config.slab_ny}")
+    print(f"  Pillar layers: {config.pillar_layers}")
+    print(f"  Leaf layers: {config.n_leaf_layers}")
+    print(f"  Spirals: {config.n_spirals}")
+    print(f"  Decorations per halogen: {config.n_decorations_per_halogen}")
+    print("=" * 50)
 
     # ----- Stage 1: Ag Slab (Base) -----
     print("\n[Stage 1] Creating Ag slab base...")
-    ag_slab = create_ag_slab(nx=10, ny=10)
+    ag_slab = create_ag_slab(nx=config.slab_nx, ny=config.slab_ny)
     current_atoms += ag_slab
     traj.write(current_atoms)
     print(f"  Added {len(ag_slab)} Ag atoms")
 
     # ----- Stage 2: Fe Pillar (Trunk) -----
     print("\n[Stage 2] Growing Fe HCP pillar...")
-    fe_pillar, fe_layers = create_fe_hcp_pillar(n_layers=12, atoms_per_layer=7)
+    fe_pillar, fe_layers = create_fe_hcp_pillar(n_layers=config.pillar_layers)
 
     for i, layer in enumerate(fe_layers):
         current_atoms += layer
@@ -569,7 +620,13 @@ def build_christmas_tree(output_file: str = "christmas_tree.traj") -> Atoms:
 
     # ----- Stage 4: Carbon Leaves -----
     print("\n[Stage 4] Growing carbon spiral leaves...")
-    leaves, pah_groups = create_pah_spiral_leaves(pillar_height=pillar_height, n_spirals=2)
+    leaves, pah_groups = create_pah_spiral_leaves(
+        pillar_height=pillar_height,
+        n_leaf_layers=config.n_leaf_layers,
+        n_spirals=config.n_spirals,
+        start_radius=config.leaf_start_radius,
+        end_radius=config.leaf_end_radius
+    )
 
     for i, pah in enumerate(pah_groups):
         current_atoms += pah
@@ -580,7 +637,11 @@ def build_christmas_tree(output_file: str = "christmas_tree.traj") -> Atoms:
 
     # ----- Stage 5: Halogen Decorations -----
     print("\n[Stage 5] Adding halogen decorations...")
-    decorated_atoms, substitutions = add_halogen_decorations(current_atoms, n_substitutions=3)
+    decorated_atoms, substitutions = add_halogen_decorations(
+        current_atoms,
+        n_substitutions=config.n_decorations_per_halogen,
+        random_seed=config.random_seed
+    )
 
     # Group substitutions by 3
     for i in range(0, len(substitutions), 3):
@@ -596,7 +657,7 @@ def build_christmas_tree(output_file: str = "christmas_tree.traj") -> Atoms:
     print("\n" + "=" * 50)
     print(f"Christmas tree complete!")
     print(f"Total atoms: {len(current_atoms)}")
-    print(f"Trajectory saved to: {output_file}")
+    print(f"Trajectory saved to: {config.output_file}")
 
     # Print composition
     symbols = current_atoms.get_chemical_symbols()
@@ -611,9 +672,27 @@ def build_christmas_tree(output_file: str = "christmas_tree.traj") -> Atoms:
 # Main
 # =============================================================================
 if __name__ == "__main__":
-    tree = build_christmas_tree("christmas_tree.traj")
+    # Example 1: Default configuration
+    config = TreeConfig()
+
+    # Example 2: Custom configuration (uncomment to use)
+    # config = TreeConfig(
+    #     slab_nx=12,
+    #     slab_ny=12,
+    #     pillar_layers=15,
+    #     n_leaf_layers=15,
+    #     n_spirals=3.0,
+    #     leaf_start_radius=4.0,
+    #     leaf_end_radius=15.0,
+    #     n_decorations_per_halogen=5,
+    #     random_seed=123,
+    #     output_file="big_tree.traj"
+    # )
+
+    tree = build_christmas_tree(config)
 
     # Also save as xyz for easy viewing
     from ase.io import write
-    write("christmas_tree.xyz", tree)
-    print(f"\nAlso saved as: christmas_tree.xyz")
+    xyz_file = config.output_file.replace('.traj', '.xyz')
+    write(xyz_file, tree)
+    print(f"\nAlso saved as: {xyz_file}")
