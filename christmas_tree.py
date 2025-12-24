@@ -18,20 +18,20 @@ from dataclasses import dataclass
 class TreeConfig:
     """Configuration parameters for the atomic Christmas tree."""
     # Base (Ag slab)
-    slab_nx: int = 15
-    slab_ny: int = 15
+    slab_nx: int = 25
+    slab_ny: int = 25
 
     # Trunk (Fe HCP pillar)
-    pillar_layers: int = 18
+    pillar_layers: int = 30
 
     # Leaves (Helicene spiral)
-    n_helix_turns: float = 3.0       # Number of helix rotations
-    n_rings_per_turn: int = 8        # Benzene rings per turn
-    helix_start_radius: float = 4.0  # Radius at top (small)
-    helix_end_radius: float = 18.0   # Radius at bottom (large)
+    n_helix_turns: float = 5.0        # Number of helix rotations
+    n_rings_per_turn: int = 12        # Benzene rings per turn
+    helix_start_radius: float = 6.0   # Radius at top (small)
+    helix_end_radius: float = 30.0    # Radius at bottom (large)
 
-    # Decorations (Halogen substitution)
-    n_decorations_per_halogen: int = 8  # Number of each F, Cl, Br
+    # Decorations (Halogen substitution) - ~25% of H atoms
+    n_decorations_per_halogen: int = 20  # Number of each F, Cl, Br (60 total)
 
     # Random seed for reproducibility
     random_seed: int = 42
