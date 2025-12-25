@@ -13,7 +13,7 @@ traj = Trajectory('christmas_tree.traj')
 viewer(traj)
 ```
 
-> Tree Twinklin
+> Decoration Twinkling
 ```python
 from xmastree import create_twinkling_trajectory
 
