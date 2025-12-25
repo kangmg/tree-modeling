@@ -27,7 +27,7 @@ from ase.calculators.calculator import PropertyNotImplementedError
 ATOM_COLORS = {
     'H': '#FFFFFF',   # White
     'C': '#228B22',   # Forest Green (leaves)
-    'F': '#90E050',   # Light green (decoration)
+    'I': '#940094',   # Purple (decoration - iodine)
     'Cl': '#1FF01F',  # Green (decoration)
     'Br': '#A62929',  # Dark red (decoration)
     'Fe': '#8B4513',  # Saddle Brown (trunk)
@@ -39,7 +39,7 @@ ATOM_COLORS = {
 ATOM_RADII = {
     'H': 0.31,
     'C': 0.76,
-    'F': 0.57,
+    'I': 1.39,        # Iodine (larger than Br)
     'Cl': 1.02,
     'Br': 1.20,
     'Fe': 1.52,

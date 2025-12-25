@@ -17,9 +17,9 @@ from dataclasses import dataclass
 @dataclass
 class TreeConfig:
     """Configuration parameters for the atomic Christmas tree."""
-    # Base (Ag slab)
-    slab_nx: int = 25
-    slab_ny: int = 25
+    # Base (Ag slab) - smaller base
+    slab_nx: int = 8
+    slab_ny: int = 8
 
     # Trunk (Fe HCP pillar)
     pillar_layers: int = 30
@@ -29,9 +29,11 @@ class TreeConfig:
     n_rings_per_turn: int = 12        # Benzene rings per turn
     helix_start_radius: float = 6.0   # Radius at top (small)
     helix_end_radius: float = 30.0    # Radius at bottom (large)
+    leaf_height_ratio: float = 0.8    # Leaves extend to this fraction of pillar height (4/5)
 
     # Decorations (Halogen substitution) - ~1/3 of H atoms
-    n_decorations_per_halogen: int = 150  # Number of each F, Cl, Br (~450 total, ~1/3 of H)
+    # Uses I (iodine), Cl, Br instead of F, Cl, Br
+    n_decorations_per_halogen: int = 150  # Number of each I, Cl, Br (~450 total, ~1/3 of H)
 
     # Random seed for reproducibility
     random_seed: int = 42
@@ -49,9 +51,9 @@ BOND_LENGTHS = {
     'Fe-Fe_c': 4.06,    # HCP Fe (c parameter)
     'C-C_aromatic': 1.40,
     'C-H': 1.09,
-    'C-F': 1.35,
     'C-Cl': 1.77,
     'C-Br': 1.94,
+    'C-I': 2.14,        # Iodine (purple)
     'Au-Au': 2.88,
 }
 
@@ -239,7 +241,8 @@ def create_fused_helicene_spiral(
     n_helix_turns: float = 5.0,
     base_rings_per_turn: int = 12,
     start_radius: float = 6.0,
-    end_radius: float = 30.0
+    end_radius: float = 30.0,
+    leaf_height_ratio: float = 0.8
 ) -> Tuple[Atoms, List[Atoms]]:
     """
     Create chemically valid PAH molecule spiral around the tree.
@@ -253,6 +256,7 @@ def create_fused_helicene_spiral(
         base_rings_per_turn: Base molecules per turn
         start_radius: Helix radius at top (small)
         end_radius: Helix radius at bottom (large)
+        leaf_height_ratio: Leaves extend to this fraction of pillar height
 
     Returns:
         (complete_leaves, [layer_group1, layer_group2, ...])
@@ -261,7 +265,8 @@ def create_fused_helicene_spiral(
 
     # Helix parameters
     start_z = pillar_height + 2.0
-    end_z = 4.0
+    # Leaves extend down to leaf_height_ratio of pillar height (e.g., 4/5 = 0.8)
+    end_z = pillar_height * (1.0 - leaf_height_ratio) + 4.0
 
     all_c_positions = []
     all_h_positions = []
@@ -473,7 +478,7 @@ def add_halogen_decorations(
     np.random.seed(random_seed)
     selected = np.random.choice(h_indices, size=n_substitutions * 3, replace=False)
 
-    halogens = ['F'] * n_substitutions + ['Cl'] * n_substitutions + ['Br'] * n_substitutions
+    halogens = ['I'] * n_substitutions + ['Cl'] * n_substitutions + ['Br'] * n_substitutions
     np.random.shuffle(halogens)
 
     substitutions = []
@@ -628,21 +633,15 @@ def build_christmas_tree(config: Optional[TreeConfig] = None) -> Atoms:
 
     pillar_height = max(current_atoms.positions[:, 2])
 
-    # ----- Stage 3: Au Star (Top) -----
-    print("\n[Stage 3] Placing Au55 star on top...")
-    au_star = create_au_star(center_z=pillar_height + 3.5)
-    current_atoms += au_star
-    traj.write(current_atoms)
-    print(f"  Added {len(au_star)} Au atoms (star cluster)")
-
-    # ----- Stage 4: Carbon Leaves (Fused helicene spiral) -----
-    print("\n[Stage 4] Growing fused helicene spiral leaves...")
+    # ----- Stage 3: Carbon Leaves (Fused helicene spiral) -----
+    print("\n[Stage 3] Growing fused helicene spiral leaves...")
     leaves, layer_groups = create_fused_helicene_spiral(
         pillar_height=pillar_height,
         n_helix_turns=config.n_helix_turns,
         base_rings_per_turn=config.n_rings_per_turn,
         start_radius=config.helix_start_radius,
-        end_radius=config.helix_end_radius
+        end_radius=config.helix_end_radius,
+        leaf_height_ratio=config.leaf_height_ratio
     )
 
     for i, layer in enumerate(layer_groups):
@@ -653,8 +652,8 @@ def build_christmas_tree(config: Optional[TreeConfig] = None) -> Atoms:
         if (i + 1) % 10 == 0 or i == len(layer_groups) - 1:
             print(f"  Layer {i+1}/{len(layer_groups)}: {n_rings} fused rings")
 
-    # ----- Stage 5: Halogen Decorations -----
-    print("\n[Stage 5] Adding halogen decorations...")
+    # ----- Stage 4: Halogen Decorations -----
+    print("\n[Stage 4] Adding halogen decorations...")
     decorated_atoms, substitutions = add_halogen_decorations(
         current_atoms,
         n_substitutions=config.n_decorations_per_halogen,
@@ -669,6 +668,14 @@ def build_christmas_tree(config: Optional[TreeConfig] = None) -> Atoms:
             current_atoms.positions[idx] = decorated_atoms.positions[idx]
         traj.write(current_atoms)
         print(f"  Batch {i//10 + 1}: Substituted {len(batch)} atoms")
+
+    # ----- Stage 5: Au Star (Top) - placed last -----
+    print("\n[Stage 5] Placing Au55 star on top...")
+    # Au55 cluster has radius ~5 Å, place center above pillar with clearance
+    au_star = create_au_star(center_z=pillar_height + 8.0)
+    current_atoms += au_star
+    traj.write(current_atoms)
+    print(f"  Added {len(au_star)} Au atoms (star cluster)")
 
     traj.close()
 
