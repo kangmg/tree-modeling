@@ -708,13 +708,16 @@ def build_christmas_tree(config: Optional[TreeConfig] = None) -> Atoms:
         leaf_height_ratio=config.leaf_height_ratio
     )
 
-    for i, layer in enumerate(layer_groups):
-        current_atoms += layer
+    # Group layers by 10 for faster animation (10 layers per frame)
+    layers_per_frame = 10
+    for i in range(0, len(layer_groups), layers_per_frame):
+        batch = layer_groups[i:i+layers_per_frame]
+        for layer in batch:
+            current_atoms += layer
         traj.write(current_atoms)
-        n_c = sum(1 for s in layer.get_chemical_symbols() if s == 'C')
-        n_rings = n_c // 6
-        if (i + 1) % 10 == 0 or i == len(layer_groups) - 1:
-            print(f"  Layer {i+1}/{len(layer_groups)}: {n_rings} fused rings")
+
+        total_c = sum(sum(1 for s in layer.get_chemical_symbols() if s == 'C') for layer in batch)
+        print(f"  Layers {i+1}-{min(i+layers_per_frame, len(layer_groups))}/{len(layer_groups)}: {total_c} C atoms")
 
     # ----- Stage 4: Halogen Decorations -----
     print("\n[Stage 4] Adding halogen decorations...")
