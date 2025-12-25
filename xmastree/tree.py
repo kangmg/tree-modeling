@@ -4,7 +4,7 @@ Atomic Christmas Tree Model
 - Trunk: Fe HCP structure
 - Leaves: Helicene-based spiral carbon structure
 - Decorations: Halogen substitution (F, Cl, Br)
-- Star: Au13 icosahedral cluster on top
+- Star: Au38 cluster on top
 """
 
 import numpy as np
@@ -30,8 +30,8 @@ class TreeConfig:
     helix_start_radius: float = 6.0   # Radius at top (small)
     helix_end_radius: float = 30.0    # Radius at bottom (large)
 
-    # Decorations (Halogen substitution) - ~25% of H atoms
-    n_decorations_per_halogen: int = 230  # Number of each F, Cl, Br (~690 total, ~25%)
+    # Decorations (Halogen substitution)
+    n_decorations_per_halogen: int = 10  # Number of each F, Cl, Br (30 total)
 
     # Random seed for reproducibility
     random_seed: int = 42
@@ -540,50 +540,65 @@ def add_halogen_decorations(
 
 
 # =============================================================================
-# Part 5: Au13 Icosahedral Star
+# Part 5: Au38 Star Cluster
 # =============================================================================
 def create_au_star(center_z: float) -> Atoms:
     """
-    Create Au13 icosahedral cluster - a spherical, chemically stable structure.
-
-    The icosahedron has:
-    - 1 central atom
-    - 12 surface atoms at vertices
+    Create Au38 cluster - a star-shaped gold nanoparticle.
 
     Parameters:
         center_z: Z-coordinate for the center of the cluster
 
     Returns:
-        Atoms object with Au13 cluster
+        Atoms object with Au38 cluster
     """
-    # Au-Au distance in cluster (slightly shorter than bulk)
-    au_au = BOND_LENGTHS['Au-Au'] * 0.95
-
-    positions = []
-
-    # Central atom
-    positions.append([0, 0, center_z])
-
-    # Icosahedron vertices
-    # Golden ratio
-    phi = (1 + np.sqrt(5)) / 2
-
-    # Scale factor to get correct Au-Au distance
-    scale = au_au / np.sqrt(1 + phi**2)
-
-    # 12 vertices of icosahedron (3 orthogonal golden rectangles)
-    vertices = [
-        [0, 1, phi], [0, -1, phi], [0, 1, -phi], [0, -1, -phi],
-        [1, phi, 0], [-1, phi, 0], [1, -phi, 0], [-1, -phi, 0],
-        [phi, 0, 1], [-phi, 0, 1], [phi, 0, -1], [-phi, 0, -1]
+    # Au38 cluster coordinates (pre-defined stable structure)
+    positions = [
+        [-3.94949450, -1.96966669, 0.00000000],
+        [-3.94949456, -0.00000004, -1.96966668],
+        [-3.94949455, -0.00000004, 1.96966668],
+        [-3.94949461, 1.96966668, 0.00000000],
+        [-1.96966665, -3.94949448, 0.00000000],
+        [-0.00000001, -3.94949451, -1.96966665],
+        [-0.00000001, -3.94949450, 1.96966665],
+        [-1.96966672, -0.00000004, -3.94949458],
+        [-0.00000001, -1.96966672, -3.94949455],
+        [-2.03488842, -2.03488845, -2.03488840],
+        [-1.98849128, -0.00000005, 0.00000000],
+        [-0.00000002, -1.98849131, 0.00000000],
+        [-0.00000002, -0.00000005, -1.98849126],
+        [-2.03488841, -2.03488844, 2.03488840],
+        [-1.96966671, -0.00000004, 3.94949456],
+        [-0.00000001, -1.96966671, 3.94949453],
+        [-0.00000002, -0.00000005, 1.98849127],
+        [-0.00000001, 1.96966671, -3.94949465],
+        [-2.03488849, 2.03488842, -2.03488846],
+        [-1.96966677, 3.94949466, 0.00000000],
+        [-0.00000002, 1.98849122, 0.00000000],
+        [-0.00000001, 3.94949468, -1.96966677],
+        [-2.03488848, 2.03488842, 2.03488847],
+        [-0.00000001, 1.96966670, 3.94949464],
+        [-0.00000001, 3.94949467, 1.96966677],
+        [1.96966665, -3.94949453, 0.00000000],
+        [1.96966671, -0.00000004, -3.94949462],
+        [2.03488841, -2.03488847, -2.03488843],
+        [1.98849125, -0.00000005, 0.00000000],
+        [3.94949458, -1.96966674, 0.00000000],
+        [3.94949463, -0.00000004, -1.96966674],
+        [2.03488840, -2.03488847, 2.03488843],
+        [1.96966670, -0.00000004, 3.94949461],
+        [3.94949462, -0.00000004, 1.96966674],
+        [2.03488848, 2.03488845, -2.03488849],
+        [1.96966677, 3.94949470, 0.00000000],
+        [3.94949468, 1.96966673, 0.00000000],
+        [2.03488847, 2.03488845, 2.03488849],
     ]
 
-    for v in vertices:
-        pos = np.array(v) * scale
-        pos[2] += center_z  # Shift to correct z position
-        positions.append(pos.tolist())
+    # Shift to center_z position
+    positions = np.array(positions)
+    positions[:, 2] += center_z
 
-    return Atoms('Au' * 13, positions=positions)
+    return Atoms('Au' * 38, positions=positions.tolist())
 
 
 # =============================================================================
@@ -635,11 +650,11 @@ def build_christmas_tree(config: Optional[TreeConfig] = None) -> Atoms:
     pillar_height = max(current_atoms.positions[:, 2])
 
     # ----- Stage 3: Au Star (Top) -----
-    print("\n[Stage 3] Placing Au13 icosahedral star on top...")
+    print("\n[Stage 3] Placing Au38 star on top...")
     au_star = create_au_star(center_z=pillar_height + 3.5)
     current_atoms += au_star
     traj.write(current_atoms)
-    print(f"  Added {len(au_star)} Au atoms (icosahedral cluster)")
+    print(f"  Added {len(au_star)} Au atoms (star cluster)")
 
     # ----- Stage 4: Carbon Leaves (Fused helicene spiral) -----
     print("\n[Stage 4] Growing fused helicene spiral leaves...")
