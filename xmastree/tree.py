@@ -273,16 +273,15 @@ def create_fused_helicene_spiral(
     benzene_c, benzene_h = _create_benzene()
 
     # Molecule sizes (approximate diameter for spacing)
-    anthracene_size = 6 * cc + 1    # 3 rings long
-    naphthalene_size = 4 * cc + 1   # 2 rings long
-    benzene_size = 2 * cc + 1       # 1 ring
+    anthracene_size = 9.5   # ~9.5 Å long (from reference coordinates)
+    naphthalene_size = 7.0  # ~7.0 Å long
+    benzene_size = 5.0      # ~5.0 Å diameter
 
-    # Number of layers in the spiral
-    n_layers = int(n_helix_turns * base_rings_per_turn)
+    # Number of layers in the spiral (increase for denser coverage)
+    n_layers = int(n_helix_turns * base_rings_per_turn * 2)  # Double the layers
 
     # Keep track of all placed molecule centers to avoid overlap
     placed_centers = []
-    min_spacing = 5.0  # Minimum distance between molecule centers
 
     for layer_idx in range(n_layers):
         t = layer_idx / max(1, n_layers - 1)
@@ -302,12 +301,19 @@ def create_fused_helicene_spiral(
             mol_c, mol_h = benzene_c.copy(), benzene_h.copy()
             mol_size = benzene_size
 
-        # Number of molecules around this layer (proportional to circumference)
-        circumference = 2 * np.pi * radius
-        n_mols = max(3, int(circumference / (mol_size * 1.5)))
+        # Adaptive minimum spacing based on molecule size and 3D orientation
+        # Molecules are tilted, so they don't overlap as much as flat placement
+        min_spacing = mol_size * 0.55  # 55% of molecule size (tilted molecules overlap less)
 
-        # Base angular position (helix rotation)
-        base_theta = t * n_helix_turns * 2 * np.pi
+        # Number of molecules around this layer (proportional to circumference)
+        # Use tighter packing for denser coverage
+        circumference = 2 * np.pi * radius
+        n_mols = max(4, int(circumference / (mol_size * 0.9)))
+
+        # Base angular position (helix rotation) with staggering
+        # Alternate layers are offset by half the angular spacing
+        angular_offset = (layer_idx % 2) * np.pi / n_mols  # Stagger every other layer
+        base_theta = t * n_helix_turns * 2 * np.pi + angular_offset
 
         layer_c_positions = []
         layer_h_positions = []
