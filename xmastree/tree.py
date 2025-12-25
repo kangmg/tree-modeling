@@ -131,135 +131,122 @@ def create_fe_hcp_pillar(n_layers: int = 18) -> Tuple[Atoms, List[Atoms]]:
 # Part 3: PAH Molecule Spiral Leaves (Chemically Valid Discrete Molecules)
 # =============================================================================
 
-def _create_coronene() -> Tuple[np.ndarray, np.ndarray]:
+def _create_naphthalene() -> Tuple[np.ndarray, np.ndarray]:
     """
-    Create coronene (C24H12) - 7 fused benzene rings in hexagonal arrangement.
+    Create naphthalene (C10H8) - 2 fused benzene rings.
 
-    Coronene is a well-known, stable PAH molecule.
+    Naphthalene is a well-known, stable PAH molecule.
+    Returns (carbon_positions, hydrogen_positions) in local coordinates centered at origin.
+
+    Structure (top view):
+        H   H       H   H
+         \ /         \ /
+          C---C   C---C
+         /     \ /     \
+        C       C       C
+         \     / \     /
+          C---C   C---C
+         / \         / \
+        H   H       H   H
+    """
+    cc = BOND_LENGTHS['C-C_aromatic']
+    ch = BOND_LENGTHS['C-H']
+
+    # Naphthalene: two fused hexagons sharing one edge
+    # 10 carbons, 8 hydrogens
+    # Long axis along x, symmetric about both axes
+
+    sqrt3_2 = np.sqrt(3) / 2
+
+    # Carbon positions (centered at origin)
+    c_positions = [
+        # Shared edge (2 carbons)
+        [0, cc / 2, 0],
+        [0, -cc / 2, 0],
+        # Left ring outer carbons (4 carbons)
+        [-cc * sqrt3_2, cc, 0],
+        [-cc * sqrt3_2, -cc, 0],
+        [-cc * sqrt3_2 * 2, cc / 2, 0],
+        [-cc * sqrt3_2 * 2, -cc / 2, 0],
+        # Right ring outer carbons (4 carbons)
+        [cc * sqrt3_2, cc, 0],
+        [cc * sqrt3_2, -cc, 0],
+        [cc * sqrt3_2 * 2, cc / 2, 0],
+        [cc * sqrt3_2 * 2, -cc / 2, 0],
+    ]
+
+    # Hydrogen positions (8 hydrogens on outer carbons)
+    h_positions = [
+        # Left ring hydrogens
+        [-cc * sqrt3_2, cc + ch, 0],
+        [-cc * sqrt3_2, -(cc + ch), 0],
+        [-cc * sqrt3_2 * 2 - ch, cc / 2, 0],
+        [-cc * sqrt3_2 * 2 - ch, -cc / 2, 0],
+        # Right ring hydrogens
+        [cc * sqrt3_2, cc + ch, 0],
+        [cc * sqrt3_2, -(cc + ch), 0],
+        [cc * sqrt3_2 * 2 + ch, cc / 2, 0],
+        [cc * sqrt3_2 * 2 + ch, -cc / 2, 0],
+    ]
+
+    return np.array(c_positions), np.array(h_positions)
+
+
+def _create_anthracene() -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Create anthracene (C14H10) - 3 linearly fused benzene rings.
+
+    Anthracene is a well-known, stable PAH molecule.
     Returns (carbon_positions, hydrogen_positions) in local coordinates centered at origin.
     """
     cc = BOND_LENGTHS['C-C_aromatic']
     ch = BOND_LENGTHS['C-H']
 
-    # Coronene has a central benzene ring surrounded by 6 benzene rings
-    # Total: 24 carbons, 12 hydrogens (on outer edge)
+    # Anthracene: three fused hexagons in a line
+    # 14 carbons, 10 hydrogens
+    # Long axis along x
 
-    c_positions = []
-    h_positions = []
+    sqrt3_2 = np.sqrt(3) / 2
 
-    # Inner ring (6 carbons)
-    for i in range(6):
-        angle = i * np.pi / 3 + np.pi / 6
-        x = cc * np.cos(angle)
-        y = cc * np.sin(angle)
-        c_positions.append([x, y, 0])
-
-    # Middle ring (12 carbons) - at distance 2*cc from center
-    # These form the outer vertices of the 6 surrounding hexagons
-    for i in range(6):
-        base_angle = i * np.pi / 3
-
-        # Two carbons per sector
-        for offset in [-np.pi/6, np.pi/6]:
-            angle = base_angle + offset
-            r = cc * np.sqrt(3)
-            x = r * np.cos(angle)
-            y = r * np.sin(angle)
-            c_positions.append([x, y, 0])
-
-    # Outer ring (6 carbons) - at distance 2*cc*sqrt(3)/sqrt(3) = 2*cc
-    # These are the outer tips
-    outer_r = 2 * cc
-    for i in range(6):
-        angle = i * np.pi / 3 + np.pi / 6
-        x = outer_r * np.cos(angle)
-        y = outer_r * np.sin(angle)
-        c_positions.append([x, y, 0])
-
-    # Hydrogens on the outer 12 carbons
-    # The "middle ring" carbons need hydrogens pointing outward
-    h_r = cc * np.sqrt(3) + ch
-    for i in range(6):
-        base_angle = i * np.pi / 3
-        for offset in [-np.pi/6, np.pi/6]:
-            angle = base_angle + offset
-            x = h_r * np.cos(angle)
-            y = h_r * np.sin(angle)
-            h_positions.append([x, y, 0])
-
-    return np.array(c_positions), np.array(h_positions)
-
-
-def _create_pyrene() -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Create pyrene (C16H10) - 4 fused benzene rings in a compact arrangement.
-
-    Pyrene is a well-known, stable PAH molecule.
-    Returns (carbon_positions, hydrogen_positions) in local coordinates.
-    """
-    cc = BOND_LENGTHS['C-C_aromatic']
-    ch = BOND_LENGTHS['C-H']
-
-    # Pyrene structure: 4 fused rings in a rectangular-ish pattern
-    # Layout (top view):
-    #    2 rings on top row, 2 rings on bottom row, sharing edges
-
-    c_positions = []
-    h_positions = []
-
-    # Use hexagon geometry
-    # Ring centers arranged as:  top-left, top-right
-    #                           bottom-left, bottom-right
-    # But rings share edges, so we need to carefully place carbons
-
-    # Simpler approach: build pyrene atom by atom with known coordinates
-    # Pyrene in standard orientation (long axis along x)
-
-    # Define the 16 carbon positions for pyrene
-    # Based on crystallographic data, normalized
-    sqrt3 = np.sqrt(3)
-    half = 0.5
-
-    # Pyrene geometry (symmetric about both x and y axes)
-    pyrene_c = [
-        # Central region (shared carbons)
-        [0, cc * sqrt3 / 2, 0],
-        [0, -cc * sqrt3 / 2, 0],
-        # Inner carbons
-        [cc * half, cc * sqrt3, 0],
-        [-cc * half, cc * sqrt3, 0],
-        [cc * half, -cc * sqrt3, 0],
-        [-cc * half, -cc * sqrt3, 0],
-        [cc, cc * sqrt3 / 2, 0],
-        [-cc, cc * sqrt3 / 2, 0],
-        [cc, -cc * sqrt3 / 2, 0],
-        [-cc, -cc * sqrt3 / 2, 0],
-        # Outer carbons (H attached)
-        [cc * 1.5, cc * sqrt3, 0],
-        [-cc * 1.5, cc * sqrt3, 0],
-        [cc * 1.5, -cc * sqrt3, 0],
-        [-cc * 1.5, -cc * sqrt3, 0],
-        [cc * 2, 0, 0],
-        [-cc * 2, 0, 0],
+    # Carbon positions (centered at origin)
+    c_positions = [
+        # Central ring (shared edges with both neighbors)
+        [0, cc / 2, 0],
+        [0, -cc / 2, 0],
+        # Left shared edge
+        [-cc * sqrt3_2, cc, 0],
+        [-cc * sqrt3_2, -cc, 0],
+        # Right shared edge
+        [cc * sqrt3_2, cc, 0],
+        [cc * sqrt3_2, -cc, 0],
+        # Left ring outer carbons
+        [-cc * sqrt3_2 * 2, cc / 2, 0],
+        [-cc * sqrt3_2 * 2, -cc / 2, 0],
+        [-cc * sqrt3_2 * 3, cc, 0],
+        [-cc * sqrt3_2 * 3, -cc, 0],
+        # Right ring outer carbons
+        [cc * sqrt3_2 * 2, cc / 2, 0],
+        [cc * sqrt3_2 * 2, -cc / 2, 0],
+        [cc * sqrt3_2 * 3, cc, 0],
+        [cc * sqrt3_2 * 3, -cc, 0],
     ]
 
-    c_positions = pyrene_c
-
-    # Hydrogens on outer carbons (10 total)
-    pyrene_h = [
-        [cc * half, cc * sqrt3 + ch, 0],
-        [-cc * half, cc * sqrt3 + ch, 0],
-        [cc * half, -(cc * sqrt3 + ch), 0],
-        [-cc * half, -(cc * sqrt3 + ch), 0],
-        [cc * 1.5 + ch * half, cc * sqrt3 + ch * sqrt3/2, 0],
-        [-(cc * 1.5 + ch * half), cc * sqrt3 + ch * sqrt3/2, 0],
-        [cc * 1.5 + ch * half, -(cc * sqrt3 + ch * sqrt3/2), 0],
-        [-(cc * 1.5 + ch * half), -(cc * sqrt3 + ch * sqrt3/2), 0],
-        [cc * 2 + ch, 0, 0],
-        [-(cc * 2 + ch), 0, 0],
+    # Hydrogen positions (10 hydrogens)
+    h_positions = [
+        # Central ring top/bottom hydrogens
+        [0, cc / 2 + ch, 0],
+        [0, -(cc / 2 + ch), 0],
+        # Left ring hydrogens
+        [-cc * sqrt3_2 * 2 - ch * sqrt3_2, cc / 2 + ch / 2, 0],
+        [-cc * sqrt3_2 * 2 - ch * sqrt3_2, -(cc / 2 + ch / 2), 0],
+        [-cc * sqrt3_2 * 3, cc + ch, 0],
+        [-cc * sqrt3_2 * 3, -(cc + ch), 0],
+        # Right ring hydrogens
+        [cc * sqrt3_2 * 2 + ch * sqrt3_2, cc / 2 + ch / 2, 0],
+        [cc * sqrt3_2 * 2 + ch * sqrt3_2, -(cc / 2 + ch / 2), 0],
+        [cc * sqrt3_2 * 3, cc + ch, 0],
+        [cc * sqrt3_2 * 3, -(cc + ch), 0],
     ]
-
-    h_positions = pyrene_h
 
     return np.array(c_positions), np.array(h_positions)
 
@@ -301,7 +288,7 @@ def create_fused_helicene_spiral(
     """
     Create chemically valid PAH molecule spiral around the tree.
 
-    Uses real, stable PAH molecules (coronene, pyrene, benzene) arranged
+    Uses real, stable PAH molecules (anthracene, naphthalene, benzene) arranged
     in a spiral pattern. Molecules are properly spaced to avoid overlap.
 
     Parameters:
@@ -325,14 +312,14 @@ def create_fused_helicene_spiral(
     group_list = []
 
     # Pre-create molecule templates
-    coronene_c, coronene_h = _create_coronene()
-    pyrene_c, pyrene_h = _create_pyrene()
+    anthracene_c, anthracene_h = _create_anthracene()
+    naphthalene_c, naphthalene_h = _create_naphthalene()
     benzene_c, benzene_h = _create_benzene()
 
     # Molecule sizes (approximate diameter for spacing)
-    coronene_size = 4 * cc + 2
-    pyrene_size = 4 * cc + 1
-    benzene_size = 2 * cc + 1
+    anthracene_size = 6 * cc + 1    # 3 rings long
+    naphthalene_size = 4 * cc + 1   # 2 rings long
+    benzene_size = 2 * cc + 1       # 1 ring
 
     # Number of layers in the spiral
     n_layers = int(n_helix_turns * base_rings_per_turn)
@@ -350,11 +337,11 @@ def create_fused_helicene_spiral(
 
         # Choose molecule type based on radius (larger molecules at larger radius)
         if radius > 20:
-            mol_c, mol_h = coronene_c.copy(), coronene_h.copy()
-            mol_size = coronene_size
+            mol_c, mol_h = anthracene_c.copy(), anthracene_h.copy()
+            mol_size = anthracene_size
         elif radius > 12:
-            mol_c, mol_h = pyrene_c.copy(), pyrene_h.copy()
-            mol_size = pyrene_size
+            mol_c, mol_h = naphthalene_c.copy(), naphthalene_h.copy()
+            mol_size = naphthalene_size
         else:
             mol_c, mol_h = benzene_c.copy(), benzene_h.copy()
             mol_size = benzene_size
