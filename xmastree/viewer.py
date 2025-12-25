@@ -634,70 +634,155 @@ def viewer(
                 }});
             }}
 
+            # async function saveAsGif() {{
+            #     const btn = document.getElementById('save-gif-btn');
+            #     const icon = document.getElementById('gif-icon');
+            #     const text = document.getElementById('gif-text');
+            #     btn.classList.add('saving');
+            #     icon.innerHTML = '&#8987;';
+            #     icon.classList.add('spinner');
+            #     text.textContent = 'Recording...';
+            #     btn.disabled = true;
+
+            #     try {{
+            #         const workerBlob = new Blob([gifWorkerCode], {{ type: 'application/javascript' }});
+            #         const workerUrl = URL.createObjectURL(workerBlob);
+
+            #         const wasPlaying = isPlaying;
+            #         if (wasPlaying) togglePlay();
+
+            #         const gif = new GIF({{
+            #             workers: 2, quality: 10,
+            #             width: renderer.domElement.width, height: renderer.domElement.height,
+            #             workerScript: workerUrl
+            #         }});
+
+            #         gif.on('finished', function(blob) {{
+            #             const url = URL.createObjectURL(blob);
+            #             const a = document.createElement('a');
+            #             a.href = url;
+            #             a.download = 'christmas_tree.gif';
+            #             a.click();
+            #             URL.revokeObjectURL(url);
+            #             URL.revokeObjectURL(workerUrl);
+
+            #             btn.classList.remove('saving');
+            #             icon.innerHTML = '&#128190;';
+            #             icon.classList.remove('spinner');
+            #             text.textContent = 'Save GIF';
+            #             btn.disabled = false;
+            #             if (wasPlaying) togglePlay();
+            #         }});
+
+            #         const cameraState = camera.clone();
+            #         const nFrames = trajectoryData.length;
+            #         const animSpeed = 1000 / parseInt(document.getElementById('animation-speed-slider').value);
+
+            #         for (let f = 0; f < nFrames; f++) {{
+            #             updateScene(f, true);
+            #             camera.position.copy(cameraState.position);
+            #             camera.quaternion.copy(cameraState.quaternion);
+            #             camera.updateProjectionMatrix();
+            #             renderer.render(scene, camera);
+            #             gif.addFrame(renderer.domElement, {{ copy: true, delay: animSpeed }});
+            #             await new Promise(r => setTimeout(r, 10));
+            #         }}
+
+            #         gif.render();
+            #     }} catch (error) {{
+            #         console.error("GIF Error:", error);
+            #         btn.classList.remove('saving');
+            #         icon.innerHTML = '&#9888;';
+            #         icon.classList.remove('spinner');
+            #         text.textContent = 'Error!';
+            #         btn.disabled = false;
+            #     }}
+            # }}
+
             async function saveAsGif() {{
                 const btn = document.getElementById('save-gif-btn');
                 const icon = document.getElementById('gif-icon');
                 const text = document.getElementById('gif-text');
                 btn.classList.add('saving');
-                icon.innerHTML = '&#8987;';
+                icon.innerHTML = '⏳';
                 icon.classList.add('spinner');
                 text.textContent = 'Recording...';
                 btn.disabled = true;
-
+            
                 try {{
                     const workerBlob = new Blob([gifWorkerCode], {{ type: 'application/javascript' }});
                     const workerUrl = URL.createObjectURL(workerBlob);
-
-                    const wasPlaying = isPlaying;
-                    if (wasPlaying) togglePlay();
-
+            
+                    const targetFps = parseInt(document.getElementById('animation-speed-slider').value || 10);
+                    const delayPerFrame = Math.round(100 / targetFps);  // gif.js uses hundredths of a second
+            
                     const gif = new GIF({{
-                        workers: 2, quality: 10,
-                        width: renderer.domElement.width, height: renderer.domElement.height,
-                        workerScript: workerUrl
+                        workers: 4,
+                        quality: 10,
+                        width: renderer.domElement.width,
+                        height: renderer.domElement.height,
+                        workerScript: workerUrl,
+                        repeat: 0  // loop forever
                     }});
-
+            
+                    // Save current camera state to keep user view angle
+                    const camPos = camera.position.clone();
+                    const camQuat = camera.quaternion.clone();
+                    controls.enabled = false;  // disable mouse control during recording
+            
+                    const totalFrames = trajectoryData.length;
+            
+                    for (let f = 0; f < totalFrames; f++) {{
+                        // Update to current frame (may be slow - that's ok)
+                        updateScene(f, true);
+            
+                        // Restore camera position and rotation
+                        camera.position.copy(camPos);
+                        camera.quaternion.copy(camQuat);
+                        camera.updateProjectionMatrix();
+            
+                        // Force render
+                        renderer.render(scene, camera);
+            
+                        // Add frame with fixed delay -> smooth GIF even if live playback lags
+                        gif.addFrame(renderer.domElement, {{ copy: true, delay: delayPerFrame }});
+            
+                        // Give browser some breathing room to prevent freezing
+                        await new Promise(r => requestAnimationFrame(() => setTimeout(r, 30)));
+                    }}
+            
+                    gif.render();
+            
                     gif.on('finished', function(blob) {{
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = 'christmas_tree.gif';
+                        a.download = 'christmas_tree_smooth.gif';
                         a.click();
+            
                         URL.revokeObjectURL(url);
                         URL.revokeObjectURL(workerUrl);
-
+            
+                        // Restore controls
+                        controls.enabled = true;
+            
                         btn.classList.remove('saving');
-                        icon.innerHTML = '&#128190;';
+                        icon.innerHTML = '📼';
                         icon.classList.remove('spinner');
                         text.textContent = 'Save GIF';
                         btn.disabled = false;
-                        if (wasPlaying) togglePlay();
                     }});
-
-                    const cameraState = camera.clone();
-                    const nFrames = trajectoryData.length;
-                    const animSpeed = 1000 / parseInt(document.getElementById('animation-speed-slider').value);
-
-                    for (let f = 0; f < nFrames; f++) {{
-                        updateScene(f, true);
-                        camera.position.copy(cameraState.position);
-                        camera.quaternion.copy(cameraState.quaternion);
-                        camera.updateProjectionMatrix();
-                        renderer.render(scene, camera);
-                        gif.addFrame(renderer.domElement, {{ copy: true, delay: animSpeed }});
-                        await new Promise(r => setTimeout(r, 10));
-                    }}
-
-                    gif.render();
+            
                 }} catch (error) {{
                     console.error("GIF Error:", error);
+                    alert("GIF save failed: " + error.message);
                     btn.classList.remove('saving');
-                    icon.innerHTML = '&#9888;';
-                    icon.classList.remove('spinner');
-                    text.textContent = 'Error!';
+                    icon.innerHTML = '⚠️';
+                    text.textContent = 'Error';
                     btn.disabled = false;
                 }}
             }}
+
         </script>
     </body>
     </html>
