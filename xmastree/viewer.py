@@ -633,72 +633,74 @@ def viewer(
                     setTimeout(() => {{ btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>'; }}, 2000);
                 }});
             }}
+            <!-- 
+            ========================================
+            async function saveAsGif() {{
+                const btn = document.getElementById('save-gif-btn');
+                const icon = document.getElementById('gif-icon');
+                const text = document.getElementById('gif-text');
+                btn.classList.add('saving');
+                icon.innerHTML = '&#8987;';
+                icon.classList.add('spinner');
+                text.textContent = 'Recording...';
+                btn.disabled = true;
 
-            # async function saveAsGif() {{
-            #     const btn = document.getElementById('save-gif-btn');
-            #     const icon = document.getElementById('gif-icon');
-            #     const text = document.getElementById('gif-text');
-            #     btn.classList.add('saving');
-            #     icon.innerHTML = '&#8987;';
-            #     icon.classList.add('spinner');
-            #     text.textContent = 'Recording...';
-            #     btn.disabled = true;
+                try {{
+                    const workerBlob = new Blob([gifWorkerCode], {{ type: 'application/javascript' }});
+                    const workerUrl = URL.createObjectURL(workerBlob);
 
-            #     try {{
-            #         const workerBlob = new Blob([gifWorkerCode], {{ type: 'application/javascript' }});
-            #         const workerUrl = URL.createObjectURL(workerBlob);
+                    const wasPlaying = isPlaying;
+                    if (wasPlaying) togglePlay();
 
-            #         const wasPlaying = isPlaying;
-            #         if (wasPlaying) togglePlay();
+                    const gif = new GIF({{
+                        workers: 2, quality: 10,
+                        width: renderer.domElement.width, height: renderer.domElement.height,
+                        workerScript: workerUrl
+                    }});
 
-            #         const gif = new GIF({{
-            #             workers: 2, quality: 10,
-            #             width: renderer.domElement.width, height: renderer.domElement.height,
-            #             workerScript: workerUrl
-            #         }});
+                    gif.on('finished', function(blob) {{
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'christmas_tree.gif';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        URL.revokeObjectURL(workerUrl);
 
-            #         gif.on('finished', function(blob) {{
-            #             const url = URL.createObjectURL(blob);
-            #             const a = document.createElement('a');
-            #             a.href = url;
-            #             a.download = 'christmas_tree.gif';
-            #             a.click();
-            #             URL.revokeObjectURL(url);
-            #             URL.revokeObjectURL(workerUrl);
+                        btn.classList.remove('saving');
+                        icon.innerHTML = '&#128190;';
+                        icon.classList.remove('spinner');
+                        text.textContent = 'Save GIF';
+                        btn.disabled = false;
+                        if (wasPlaying) togglePlay();
+                    }});
 
-            #             btn.classList.remove('saving');
-            #             icon.innerHTML = '&#128190;';
-            #             icon.classList.remove('spinner');
-            #             text.textContent = 'Save GIF';
-            #             btn.disabled = false;
-            #             if (wasPlaying) togglePlay();
-            #         }});
+                    const cameraState = camera.clone();
+                    const nFrames = trajectoryData.length;
+                    const animSpeed = 1000 / parseInt(document.getElementById('animation-speed-slider').value);
 
-            #         const cameraState = camera.clone();
-            #         const nFrames = trajectoryData.length;
-            #         const animSpeed = 1000 / parseInt(document.getElementById('animation-speed-slider').value);
+                    for (let f = 0; f < nFrames; f++) {{
+                        updateScene(f, true);
+                        camera.position.copy(cameraState.position);
+                        camera.quaternion.copy(cameraState.quaternion);
+                        camera.updateProjectionMatrix();
+                        renderer.render(scene, camera);
+                        gif.addFrame(renderer.domElement, {{ copy: true, delay: animSpeed }});
+                        await new Promise(r => setTimeout(r, 10));
+                    }}
 
-            #         for (let f = 0; f < nFrames; f++) {{
-            #             updateScene(f, true);
-            #             camera.position.copy(cameraState.position);
-            #             camera.quaternion.copy(cameraState.quaternion);
-            #             camera.updateProjectionMatrix();
-            #             renderer.render(scene, camera);
-            #             gif.addFrame(renderer.domElement, {{ copy: true, delay: animSpeed }});
-            #             await new Promise(r => setTimeout(r, 10));
-            #         }}
-
-            #         gif.render();
-            #     }} catch (error) {{
-            #         console.error("GIF Error:", error);
-            #         btn.classList.remove('saving');
-            #         icon.innerHTML = '&#9888;';
-            #         icon.classList.remove('spinner');
-            #         text.textContent = 'Error!';
-            #         btn.disabled = false;
-            #     }}
-            # }}
-
+                    gif.render();
+                }} catch (error) {{
+                    console.error("GIF Error:", error);
+                    btn.classList.remove('saving');
+                    icon.innerHTML = '&#9888;';
+                    icon.classList.remove('spinner');
+                    text.textContent = 'Error!';
+                    btn.disabled = false;
+                }}
+            }}
+            ========================================
+            -->
             async function saveAsGif() {{
                 const btn = document.getElementById('save-gif-btn');
                 const icon = document.getElementById('gif-icon');
