@@ -506,6 +506,70 @@ def add_halogen_decorations(
     return new_atoms, substitutions
 
 
+def create_twinkling_trajectory(
+    atoms: Atoms,
+    n_frames: int = 30,
+    random_seed: int = 42,
+    output_file: str = "twinkling_tree.traj"
+) -> List[Atoms]:
+    """
+    Create a twinkling animation by randomly switching halogen types each frame.
+
+    Takes the final tree structure and creates n_frames where halogens (I, Cl, Br)
+    randomly switch identities while keeping their positions, creating a
+    twinkling/blinking effect for the decorations.
+
+    Parameters:
+        atoms: The complete tree structure with halogens
+        n_frames: Number of animation frames to generate
+        random_seed: Random seed for reproducibility
+        output_file: Output trajectory file name
+
+    Returns:
+        List of Atoms objects (one per frame)
+    """
+    np.random.seed(random_seed)
+
+    # Find all halogen indices
+    symbols = atoms.get_chemical_symbols()
+    halogen_types = ['I', 'Cl', 'Br']
+    halogen_indices = [i for i, s in enumerate(symbols) if s in halogen_types]
+
+    if not halogen_indices:
+        print("No halogens found in the structure!")
+        return [atoms.copy()]
+
+    print(f"Creating twinkling animation with {n_frames} frames...")
+    print(f"  Found {len(halogen_indices)} halogen atoms to animate")
+
+    frames = []
+    traj = Trajectory(output_file, 'w')
+
+    for frame_idx in range(n_frames):
+        # Copy the structure
+        frame_atoms = atoms.copy()
+        frame_symbols = list(frame_atoms.get_chemical_symbols())
+
+        # Randomly assign new halogen types to each halogen position
+        for idx in halogen_indices:
+            new_halogen = np.random.choice(halogen_types)
+            frame_symbols[idx] = new_halogen
+
+        # Update symbols
+        frame_atoms.set_chemical_symbols(frame_symbols)
+
+        frames.append(frame_atoms)
+        traj.write(frame_atoms)
+
+        if (frame_idx + 1) % 10 == 0 or frame_idx == n_frames - 1:
+            print(f"  Frame {frame_idx + 1}/{n_frames}")
+
+    traj.close()
+    print(f"Twinkling trajectory saved to: {output_file}")
+
+    return frames
+
+
 # =============================================================================
 # Part 5: Au55 Star Cluster
 # =============================================================================
