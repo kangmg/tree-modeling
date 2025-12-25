@@ -137,56 +137,30 @@ def _create_naphthalene() -> Tuple[np.ndarray, np.ndarray]:
 
     Naphthalene is a well-known, stable PAH molecule.
     Returns (carbon_positions, hydrogen_positions) in local coordinates centered at origin.
-
-    Structure (top view):
-        H   H       H   H
-         \ /         \ /
-          C---C   C---C
-         /     \ /     \
-        C       C       C
-         \     / \     /
-          C---C   C---C
-         / \         / \
-        H   H       H   H
     """
-    cc = BOND_LENGTHS['C-C_aromatic']
-    ch = BOND_LENGTHS['C-H']
-
-    # Naphthalene: two fused hexagons sharing one edge
-    # 10 carbons, 8 hydrogens
-    # Long axis along x, symmetric about both axes
-
-    sqrt3_2 = np.sqrt(3) / 2
-
-    # Carbon positions (centered at origin)
+    # Naphthalene coordinates from reference structure
     c_positions = [
-        # Shared edge (2 carbons)
-        [0, cc / 2, 0],
-        [0, -cc / 2, 0],
-        # Left ring outer carbons (4 carbons)
-        [-cc * sqrt3_2, cc, 0],
-        [-cc * sqrt3_2, -cc, 0],
-        [-cc * sqrt3_2 * 2, cc / 2, 0],
-        [-cc * sqrt3_2 * 2, -cc / 2, 0],
-        # Right ring outer carbons (4 carbons)
-        [cc * sqrt3_2, cc, 0],
-        [cc * sqrt3_2, -cc, 0],
-        [cc * sqrt3_2 * 2, cc / 2, 0],
-        [cc * sqrt3_2 * 2, -cc / 2, 0],
+        [2.4044, 0.7559, 0.0000],
+        [2.4328, -0.6584, 0.0000],
+        [1.2672, -1.3753, 0.0000],
+        [0.0142, -0.7050, 0.0000],
+        [-0.0142, 0.7048, 0.0000],
+        [1.2108, 1.4252, 0.0000],
+        [-1.2672, 1.3754, 0.0000],
+        [-2.4328, 0.6585, 0.0000],
+        [-2.4043, -0.7558, 0.0000],
+        [-1.2108, -1.4254, 0.0000],
     ]
 
-    # Hydrogen positions (8 hydrogens on outer carbons)
     h_positions = [
-        # Left ring hydrogens
-        [-cc * sqrt3_2, cc + ch, 0],
-        [-cc * sqrt3_2, -(cc + ch), 0],
-        [-cc * sqrt3_2 * 2 - ch, cc / 2, 0],
-        [-cc * sqrt3_2 * 2 - ch, -cc / 2, 0],
-        # Right ring hydrogens
-        [cc * sqrt3_2, cc + ch, 0],
-        [cc * sqrt3_2, -(cc + ch), 0],
-        [cc * sqrt3_2 * 2 + ch, cc / 2, 0],
-        [cc * sqrt3_2 * 2 + ch, -cc / 2, 0],
+        [3.3509, 1.3062, 0.0000],
+        [3.4006, -1.1703, 0.0000],
+        [1.2810, -2.4710, 0.0000],
+        [1.1803, 2.5206, 0.0000],
+        [-1.2808, 2.4710, 0.0000],
+        [-3.4008, 1.1701, 0.0000],
+        [-3.3508, -1.3060, 0.0000],
+        [-1.1805, -2.5207, 0.0000],
     ]
 
     return np.array(c_positions), np.array(h_positions)
@@ -199,53 +173,35 @@ def _create_anthracene() -> Tuple[np.ndarray, np.ndarray]:
     Anthracene is a well-known, stable PAH molecule.
     Returns (carbon_positions, hydrogen_positions) in local coordinates centered at origin.
     """
-    cc = BOND_LENGTHS['C-C_aromatic']
-    ch = BOND_LENGTHS['C-H']
-
-    # Anthracene: three fused hexagons in a line
-    # 14 carbons, 10 hydrogens
-    # Long axis along x
-
-    sqrt3_2 = np.sqrt(3) / 2
-
-    # Carbon positions (centered at origin)
+    # Anthracene coordinates from reference structure
     c_positions = [
-        # Central ring (shared edges with both neighbors)
-        [0, cc / 2, 0],
-        [0, -cc / 2, 0],
-        # Left shared edge
-        [-cc * sqrt3_2, cc, 0],
-        [-cc * sqrt3_2, -cc, 0],
-        # Right shared edge
-        [cc * sqrt3_2, cc, 0],
-        [cc * sqrt3_2, -cc, 0],
-        # Left ring outer carbons
-        [-cc * sqrt3_2 * 2, cc / 2, 0],
-        [-cc * sqrt3_2 * 2, -cc / 2, 0],
-        [-cc * sqrt3_2 * 3, cc, 0],
-        [-cc * sqrt3_2 * 3, -cc, 0],
-        # Right ring outer carbons
-        [cc * sqrt3_2 * 2, cc / 2, 0],
-        [cc * sqrt3_2 * 2, -cc / 2, 0],
-        [cc * sqrt3_2 * 3, cc, 0],
-        [cc * sqrt3_2 * 3, -cc, 0],
+        [3.6609, 0.5848, 0.0000],
+        [3.6110, -0.8397, 0.0000],
+        [2.4165, -1.4895, 0.0000],
+        [1.1870, -0.7528, 0.0000],
+        [2.5148, 1.3166, 0.0000],
+        [1.2368, 0.6679, 0.0000],
+        [-0.0491, -1.4032, 0.0000],
+        [-1.2369, -0.6678, 0.0000],
+        [0.0492, 1.4033, 0.0000],
+        [-1.1871, 0.7528, 0.0000],
+        [-2.5148, -1.3167, 0.0000],
+        [-3.6609, -0.5848, 0.0000],
+        [-3.6110, 0.8395, 0.0000],
+        [-2.4165, 1.4895, 0.0000],
     ]
 
-    # Hydrogen positions (10 hydrogens)
     h_positions = [
-        # Central ring top/bottom hydrogens
-        [0, cc / 2 + ch, 0],
-        [0, -(cc / 2 + ch), 0],
-        # Left ring hydrogens
-        [-cc * sqrt3_2 * 2 - ch * sqrt3_2, cc / 2 + ch / 2, 0],
-        [-cc * sqrt3_2 * 2 - ch * sqrt3_2, -(cc / 2 + ch / 2), 0],
-        [-cc * sqrt3_2 * 3, cc + ch, 0],
-        [-cc * sqrt3_2 * 3, -(cc + ch), 0],
-        # Right ring hydrogens
-        [cc * sqrt3_2 * 2 + ch * sqrt3_2, cc / 2 + ch / 2, 0],
-        [cc * sqrt3_2 * 2 + ch * sqrt3_2, -(cc / 2 + ch / 2), 0],
-        [cc * sqrt3_2 * 3, cc + ch, 0],
-        [cc * sqrt3_2 * 3, -(cc + ch), 0],
+        [4.6397, 1.0755, 0.0000],
+        [4.5529, -1.3980, 0.0000],
+        [2.3680, -2.5843, 0.0000],
+        [2.5432, 2.4122, 0.0000],
+        [-0.0876, -2.4995, 0.0000],
+        [0.0876, 2.4996, 0.0000],
+        [-2.5431, -2.4122, 0.0000],
+        [-4.6397, -1.0756, 0.0000],
+        [-4.5531, 1.3975, 0.0000],
+        [-2.3682, 2.5844, 0.0000],
     ]
 
     return np.array(c_positions), np.array(h_positions)
