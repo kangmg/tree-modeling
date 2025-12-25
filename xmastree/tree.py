@@ -17,9 +17,9 @@ from dataclasses import dataclass
 @dataclass
 class TreeConfig:
     """Configuration parameters for the atomic Christmas tree."""
-    # Base (Ag slab) - smaller base
-    slab_nx: int = 8
-    slab_ny: int = 8
+    # Base (Ag slab)
+    slab_nx: int = 16
+    slab_ny: int = 16
 
     # Trunk (Fe HCP pillar)
     pillar_layers: int = 30

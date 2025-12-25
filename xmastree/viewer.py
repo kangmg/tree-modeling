@@ -43,7 +43,7 @@ ATOM_RADII = {
     'Cl': 1.02,
     'Br': 1.20,
     'Fe': 1.52,
-    'Ag': 1.45,
+    'Ag': 1.80,       # Larger silver atoms for base
     'Au': 1.36,
     'default': 0.7
 }
