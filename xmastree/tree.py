@@ -30,8 +30,8 @@ class TreeConfig:
     helix_start_radius: float = 6.0   # Radius at top (small)
     helix_end_radius: float = 30.0    # Radius at bottom (large)
 
-    # Decorations (Halogen substitution)
-    n_decorations_per_halogen: int = 10  # Number of each F, Cl, Br (30 total)
+    # Decorations (Halogen substitution) - ~1/3 of H atoms
+    n_decorations_per_halogen: int = 150  # Number of each F, Cl, Br (~450 total, ~1/3 of H)
 
     # Random seed for reproducibility
     random_seed: int = 42
@@ -655,14 +655,14 @@ def build_christmas_tree(config: Optional[TreeConfig] = None) -> Atoms:
         random_seed=config.random_seed
     )
 
-    # Group substitutions by 3
-    for i in range(0, len(substitutions), 3):
-        batch = substitutions[i:i+3]
+    # Group substitutions by 10
+    for i in range(0, len(substitutions), 10):
+        batch = substitutions[i:i+10]
         for idx, halogen in batch:
             current_atoms[idx].symbol = halogen
             current_atoms.positions[idx] = decorated_atoms.positions[idx]
         traj.write(current_atoms)
-        print(f"  Batch {i//3 + 1}: Substituted {[h for _, h in batch]}")
+        print(f"  Batch {i//10 + 1}: Substituted {len(batch)} atoms")
 
     traj.close()
 
